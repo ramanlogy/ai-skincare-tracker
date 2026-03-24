@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SanjuAI — Skincare Progress Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="auth-page">
+
+<div class="flash-container">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+    <div class="flash flash-{{ category }}">
+      {{ message }}
+      <button class="flash-close" onclick="this.parentElement.remove()">×</button>
+    </div>
+    {% endfor %}
+  {% endwith %}
+</div>
+
+<div class="auth-layout">
+
+  <!-- Left panel — branding -->
+  <div class="auth-hero">
+    <div class="hero-inner">
+      <p class="hero-eyebrow">COM668 Computing Project</p>
+      <h1 class="hero-title">Sanju<em>AI</em></h1>
+      <p class="hero-subtitle">
+        Objective, AI-powered skincare progress tracking.<br>
+        Measure what matters. See real results.
+      </p>
+      <div class="hero-features">
+        <div class="feat">
+          <span class="feat-icon">◎</span>
+          <span>Face detection &amp; alignment</span>
+        </div>
+        <div class="feat">
+          <span class="feat-icon">◎</span>
+          <span>Acne, redness &amp; texture analysis</span>
+        </div>
+        <div class="feat">
+          <span class="feat-icon">◎</span>
+          <span>Progress charts over time</span>
+        </div>
+        <div class="feat">
+          <span class="feat-icon">◎</span>
+          <span>All data stays on your device</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right panel — forms -->
+  <div class="auth-forms">
+    <div class="form-card" id="loginCard" {% if show_register %}style="display:none"{% endif %}>
+      <h2 class="form-title">Welcome back</h2>
+      <p class="form-sub">Sign in to your account</p>
+      <form method="POST" action="{{ url_for('main.login') }}">
+        <div class="field">
+          <label>Username</label>
+          <input type="text" name="username" placeholder="your username" required autofocus>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn-primary full-width">Sign In</button>
+      </form>
+      <p class="form-switch">
+        New here? <a href="#" onclick="toggleForms()">Create an account</a>
+      </p>
+    </div>
+
+    <div class="form-card" id="registerCard" {% if not show_register %}style="display:none"{% endif %}>
+      <h2 class="form-title">Create account</h2>
+      <p class="form-sub">Start tracking your skincare journey</p>
+      <form method="POST" action="{{ url_for('main.register') }}">
+        <div class="field">
+          <label>Username</label>
+          <input type="text" name="username" placeholder="choose a username" required>
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" name="email" placeholder="you@example.com" required>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="at least 6 characters" required minlength="6">
+        </div>
+        <div class="field">
+          <label>Confirm Password</label>
+          <input type="password" name="confirm_password" placeholder="repeat password" required>
+        </div>
+
+        <!-- GDPR/Ethics informed consent -->
+        <div class="consent-box">
+          <label class="consent-label">
+            <input type="checkbox" name="consent" required>
+            <span>
+              I understand that this application captures and locally stores facial
+              images for skincare analysis. I consent to this use and acknowledge
+              that SanjuAI is <strong>not a medical device</strong> and provides
+              no medical advice.
+            </span>
+          </label>
+        </div>
+
+        <button type="submit" class="btn-primary full-width">Create Account</button>
+      </form>
+      <p class="form-switch">
+        Already have an account? <a href="#" onclick="toggleForms()">Sign in</a>
+      </p>
+    </div>
+
+    <p class="disclaimer-mini">
+      ⚠ This tool tracks skincare product progress only. It does not diagnose
+      or treat skin conditions. Consult a Sanjuatologist for medical concerns.
+    </p>
+  </div>
+
+</div>
+
+<script>
+function toggleForms() {
+  const login    = document.getElementById('loginCard');
+  const register = document.getElementById('registerCard');
+  if (login.style.display === 'none') {
+    login.style.display    = 'block';
+    register.style.display = 'none';
+  } else {
+    login.style.display    = 'none';
+    register.style.display = 'block';
+  }
+}
+</script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

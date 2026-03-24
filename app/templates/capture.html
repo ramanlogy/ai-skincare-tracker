@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}New Scan — SanjuAI{% endblock %}
+
+{% block content %}
+<div class="page-container page-container--narrow">
+
+  <div class="page-header">
+    <h1 class="page-title">New Skin Scan</h1>
+    <p class="page-sub">Upload a clear, frontal photo of your face for analysis</p>
+  </div>
+
+  <!-- Guidance tips -->
+  <div class="tips-bar">
+    <div class="tip"><span>💡</span> Face the camera directly</div>
+    <div class="tip"><span>☀️</span> Good natural or bright light</div>
+    <div class="tip"><span>📏</span> Keep consistent distance</div>
+    <div class="tip"><span>🚿</span> Clean, make-up-free skin</div>
+  </div>
+
+  <!-- Upload form -->
+  <div class="card">
+    <form method="POST" action="{{ url_for('main.upload') }}" enctype="multipart/form-data" id="uploadForm">
+
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" name="image" id="imageInput" accept="image/*"
+               style="display:none" onchange="previewImage(event)" required>
+
+        <div id="uploadPlaceholder" onclick="document.getElementById('imageInput').click()">
+          <div class="upload-icon">◈</div>
+          <p class="upload-cta">Click to choose an image</p>
+          <p class="upload-hint">JPG, PNG or WEBP · max 16 MB</p>
+        </div>
+
+        <div id="previewContainer" style="display:none">
+          <img id="previewImg" src="" alt="Preview" class="preview-image">
+          <div class="preview-actions">
+            <button type="button" class="btn-ghost" onclick="clearPreview()">Choose different</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="notes">Notes <span class="optional">(optional)</span></label>
+        <input type="text" name="notes" id="notes"
+               placeholder="e.g. Week 3 of new moisturiser, morning routine…">
+      </div>
+
+      <div class="consent-reminder">
+        By submitting this scan you confirm that you have consented to
+        facial image capture for personal skincare tracking purposes.
+        All data is stored locally on this device only.
+      </div>
+
+      <button type="submit" class="btn-primary full-width" id="submitBtn" disabled>
+        <span id="btnText">Analyse Scan</span>
+        <span id="btnLoader" style="display:none">Analysing…</span>
+      </button>
+    </form>
+  </div>
+
+  <!-- What gets analysed -->
+  <div class="info-grid">
+    <div class="info-card">
+      <h4>◎ Acne Detection</h4>
+      <p>Counts blemishes and measures skin clarity using blob detection and HSV colour analysis.</p>
+    </div>
+    <div class="info-card">
+      <h4>◎ Redness Analysis</h4>
+      <p>Measures inflammation and redness by analysing colour distribution across facial regions.</p>
+    </div>
+    <div class="info-card">
+      <h4>◎ Texture Score</h4>
+      <p>Evaluates skin smoothness using Local Binary Pattern (LBP) texture descriptors.</p>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function previewImage(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('previewImg').src = e.target.result;
+    document.getElementById('uploadPlaceholder').style.display = 'none';
+    document.getElementById('previewContainer').style.display  = 'block';
+    document.getElementById('submitBtn').disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearPreview() {
+  document.getElementById('imageInput').value = '';
+  document.getElementById('previewImg').src   = '';
+  document.getElementById('uploadPlaceholder').style.display = 'block';
+  document.getElementById('previewContainer').style.display  = 'none';
+  document.getElementById('submitBtn').disabled = true;
+}
+
+document.getElementById('uploadForm').addEventListener('submit', () => {
+  document.getElementById('btnText').style.display   = 'none';
+  document.getElementById('btnLoader').style.display = 'inline';
+  document.getElementById('submitBtn').disabled      = true;
+});
+
+// Drag-and-drop support
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', ()  => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => {
+  e.preventDefault();
+  zone.classList.remove('drag-over');
+  const input = document.getElementById('imageInput');
+  const dt    = new DataTransfer();
+  dt.items.add(e.dataTransfer.files[0]);
+  input.files = dt.files;
+  previewImage({ target: input });
+});
+</script>
+{% endblock %}

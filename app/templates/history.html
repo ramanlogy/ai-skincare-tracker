@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}History — SanjuAI{% endblock %}
+
+{% block content %}
+<div class="page-container">
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Scan History</h1>
+      <p class="page-sub">{{ scans | length }} total scan{{ 's' if scans | length != 1 }}</p>
+    </div>
+    <a href="{{ url_for('main.capture') }}" class="btn-primary">+ New Scan</a>
+  </div>
+
+  {% if not scans %}
+  <div class="empty-state">
+    <div class="empty-icon">◈</div>
+    <h2>No scans yet</h2>
+    <p>Start your skincare tracking journey by capturing your first scan.</p>
+    <a href="{{ url_for('main.capture') }}" class="btn-primary">Capture First Scan</a>
+  </div>
+  {% else %}
+
+  <div class="history-grid">
+    {% for scan in scans %}
+    <div class="history-card">
+      <div class="history-img-wrap">
+        <img src="{{ url_for('static', filename='uploads/' + scan.image_filename) }}"
+             alt="Scan {{ scan.id }}" class="history-img">
+        <span class="badge badge--{{ scan.analysis_status }} history-badge">
+          {{ scan.analysis_status }}
+        </span>
+      </div>
+      <div class="history-body">
+        <p class="history-date">{{ scan.captured_at.strftime('%d %b %Y · %H:%M') }}</p>
+
+        {% if scan.analysis_status == 'complete' %}
+        <div class="mini-scores">
+          <div class="mini-score">
+            <span class="ms-label">Overall</span>
+            <span class="ms-val">{{ scan.overall_score | int }}</span>
+          </div>
+          <div class="mini-score">
+            <span class="ms-label">Clarity</span>
+            <span class="ms-val">{{ scan.acne_score | int }}</span>
+          </div>
+          <div class="mini-score">
+            <span class="ms-label">Redness</span>
+            <span class="ms-val">{{ scan.redness_score | int }}</span>
+          </div>
+          <div class="mini-score">
+            <span class="ms-label">Texture</span>
+            <span class="ms-val">{{ scan.texture_score | int }}</span>
+          </div>
+        </div>
+
+        {% if scan.overall_change != 0 %}
+        <p class="history-change {% if scan.overall_change > 0 %}pos{% else %}neg{% endif %}">
+          {% if scan.overall_change > 0 %}▲{% else %}▼{% endif %}
+          {{ scan.overall_change | abs | round(1) }} vs baseline
+        </p>
+        {% endif %}
+
+        {% elif scan.analysis_status == 'failed' %}
+        <p class="history-note">⚠ No face detected — re-capture in better light.</p>
+        {% else %}
+        <p class="history-note">Pending analysis</p>
+        {% endif %}
+
+        {% if scan.notes %}
+        <p class="history-notes">{{ scan.notes }}</p>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('main.delete_scan', scan_id=scan.id) }}"
+              class="delete-form"
+              onsubmit="return confirm('Delete this scan permanently?')">
+          <button type="submit" class="btn-danger-sm">Delete</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- GDPR data deletion -->
+  <div class="card data-rights">
+    <h3>Your Data Rights</h3>
+    <p>All facial images and analysis data are stored locally on this server only.
+       You may delete individual scans above, or permanently delete your entire
+       account and all associated data below.</p>
+    <form method="POST" action="{{ url_for('main.delete_account') }}"
+          onsubmit="return confirm('This will permanently delete your account and ALL data. Are you absolutely sure?')">
+      <button type="submit" class="btn-danger">Delete My Account &amp; All Data</button>
+    </form>
+  </div>
+
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — SanjuAI{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+
+  <!-- Page header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Skin Health Dashboard</h1>
+      <p class="page-sub">{{ total_scans }} scan{{ 's' if total_scans != 1 }} recorded</p>
+    </div>
+    <a href="{{ url_for('main.capture') }}" class="btn-primary">+ New Scan</a>
+  </div>
+
+  {% if not latest %}
+  <!-- Empty state -->
+  <div class="empty-state">
+    <div class="empty-icon">◈</div>
+    <h2>No scans yet</h2>
+    <p>Capture your first facial scan to start tracking your skincare progress.</p>
+    <a href="{{ url_for('main.capture') }}" class="btn-primary">Capture First Scan</a>
+  </div>
+
+  {% else %}
+
+  <!-- Score cards -->
+  <div class="score-grid">
+    <div class="score-card score-card--overall">
+      <p class="score-label">Overall Score</p>
+      <div class="score-ring">
+        <svg viewBox="0 0 120 120" class="ring-svg">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="10"/>
+          <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="10"
+                  stroke-linecap="round" stroke-dasharray="314"
+                  stroke-dashoffset="{{ 314 - (latest.overall_score / 100 * 314) }}"
+                  transform="rotate(-90 60 60)"/>
+        </svg>
+        <span class="ring-value">{{ latest.overall_score | int }}</span>
+      </div>
+      <div class="score-change {% if latest.overall_change >= 0 %}pos{% else %}neg{% endif %}">
+        {% if latest.overall_change > 0 %}▲{% elif latest.overall_change < 0 %}▼{% else %}—{% endif %}
+        {{ latest.overall_change | abs | round(1) }}
+      </div>
+    </div>
+
+    {% set metrics = [
+      ('Skin Clarity', latest.acne_score,    latest.acne_change,    'var(--sage)'),
+      ('Redness',      latest.redness_score, latest.redness_change, 'var(--rose)'),
+      ('Texture',      latest.texture_score, latest.texture_change, 'var(--sky)'),
+    ] %}
+    {% for label, score, change, color in metrics %}
+    <div class="score-card">
+      <p class="score-label">{{ label }}</p>
+      <div class="bar-score">
+        <div class="bar-track">
+          <div class="bar-fill" style="width:{{ score }}%; background:{{ color }}"></div>
+        </div>
+        <span class="bar-num">{{ score | int }}</span>
+      </div>
+      <div class="score-change {% if change >= 0 %}pos{% else %}neg{% endif %}">
+        {% if change > 0 %}▲{% elif change < 0 %}▼{% else %}—{% endif %}
+        {{ change | abs | round(1) }} vs baseline
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Latest scan snapshot -->
+  <div class="section-row">
+    <div class="card card--image">
+      <h3 class="card-title">Latest Scan</h3>
+      <div class="scan-preview">
+        <img src="{{ url_for('static', filename='uploads/' + latest.image_filename) }}"
+             alt="Latest scan"
+             class="scan-img">
+        <div class="scan-meta">
+          <p><strong>Captured:</strong> {{ latest.captured_at.strftime('%d %b %Y, %H:%M') }}</p>
+          <p><strong>Acne spots:</strong> {{ latest.acne_count | int }}</p>
+          <p><strong>Status:</strong>
+            <span class="badge badge--{{ latest.analysis_status }}">{{ latest.analysis_status }}</span>
+          </p>
+          {% if latest.notes %}
+          <p><strong>Notes:</strong> {{ latest.notes }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if total_scans > 1 %}
+    <div class="card card--compare">
+      <h3 class="card-title">Progress vs Baseline</h3>
+      <div class="compare-row">
+        <div class="compare-col">
+          <p class="compare-label">Baseline</p>
+          <img src="{{ url_for('static', filename='uploads/' + baseline.image_filename) }}"
+               alt="Baseline" class="compare-img">
+          <p class="compare-date">{{ baseline.captured_at.strftime('%d %b %Y') }}</p>
+        </div>
+        <div class="compare-arrow">→</div>
+        <div class="compare-col">
+          <p class="compare-label">Latest</p>
+          <img src="{{ url_for('static', filename='uploads/' + latest.image_filename) }}"
+               alt="Latest" class="compare-img">
+          <p class="compare-date">{{ latest.captured_at.strftime('%d %b %Y') }}</p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Charts -->
+  {% if total_scans > 1 %}
+  <div class="card">
+    <h3 class="card-title">Progress Over Time</h3>
+    <div class="chart-tabs">
+      <button class="tab-btn active" onclick="showChart('overall', this)">Overall</button>
+      <button class="tab-btn"        onclick="showChart('acne', this)">Skin Clarity</button>
+      <button class="tab-btn"        onclick="showChart('redness', this)">Redness</button>
+      <button class="tab-btn"        onclick="showChart('texture', this)">Texture</button>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="chartOverall"></canvas>
+      <canvas id="chartAcne"    style="display:none"></canvas>
+      <canvas id="chartRedness" style="display:none"></canvas>
+      <canvas id="chartTexture" style="display:none"></canvas>
+    </div>
+  </div>
+  {% endif %}
+
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if total_scans > 1 %}
+<script>
+const LABELS  = {{ chart_labels | tojson }};
+const OVERALL = {{ overall_data | tojson }};
+const ACNE    = {{ acne_data    | tojson }};
+const REDNESS = {{ redness_data | tojson }};
+const TEXTURE = {{ texture_data | tojson }};
+
+const chartDefaults = {
+  type: 'line',
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false }, tooltip: { mode: 'index' } },
+    scales: {
+      x: { grid: { color: 'rgba(0,0,0,.05)' }, ticks: { font: { family: 'DM Sans' } } },
+      y: { min: 0, max: 100, grid: { color: 'rgba(0,0,0,.05)' },
+           ticks: { font: { family: 'DM Sans' } } }
+    },
+    elements: { point: { radius: 5, hoverRadius: 7 } }
+  }
+};
+
+function makeChart(id, data, color) {
+  return new Chart(document.getElementById(id), {
+    ...chartDefaults,
+    data: {
+      labels: LABELS,
+      datasets: [{
+        data,
+        borderColor: color,
+        backgroundColor: color + '22',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2.5,
+      }]
+    }
+  });
+}
+
+const charts = {
+  overall: makeChart('chartOverall', OVERALL, '#4a7c59'),
+  acne:    makeChart('chartAcne',    ACNE,    '#4a7c59'),
+  redness: makeChart('chartRedness', REDNESS, '#c17b6c'),
+  texture: makeChart('chartTexture', TEXTURE, '#6c9ec1'),
+};
+
+function showChart(key, btn) {
+  ['overall','acne','redness','texture'].forEach(k => {
+    const el = document.getElementById('chart' + k.charAt(0).toUpperCase() + k.slice(1));
+    el.style.display = k === key ? 'block' : 'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+{% endif %}
+{% endblock %}
